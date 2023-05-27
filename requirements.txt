@@ -35,7 +35,7 @@ drf-yasg==1.21.3
 dronekit==2.9.2
 ecdsa==0.18.0
 executing==1.2.0
-experta==1.9.4
+
 freeze-requirements==0.5.3
 frozendict==1.2
 future==0.18.3
