@@ -1,7 +1,7 @@
 from django.urls import path,include
 from rest_framework_simplejwt import views as jwt_views
-from . import views
-from pharmacy.views import PharmacyRegistrationView,PharmacyLoginView,LogOutView,RestPasswordView,PharmacyProfileView,MedicineDetailes,MedicineInfo,OffersDetailes
+#from . import views
+from pharmacy.views import PharmacyRegistrationView,PharmacyLoginView,LogOutView,RestPasswordView,PharmacyProfileView,MedicineDetailes,MedicineInfo,submit_subscription,OffersDetailes
 
 urlpatterns=[
 
@@ -15,7 +15,7 @@ urlpatterns=[
   #re_path(r'^$', views.home, name='index'),
   path('subscriptionToken/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
   path('subscriptionToken/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
-  path("submit_subscription",views.submit_subscription),
+  path('submit_subscription/',submit_subscription),
   path('logout/',LogOutView.as_view(),name='logout'),
   
   ]

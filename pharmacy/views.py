@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 import jwt, datetime
 from rest_framework.exceptions import AuthenticationFailed
-from pharmacy.models import Pharmacy,Medicine,Offers,Subscription,Subscription_Pharmacy
+from pharmacy.models import Pharmacy,Medicine,Offers,Subscription,Subscription_Pharmacy,Pharmacy_medicine,Subscription_Pharmacy
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 #from rest_framework.renderers import JSONRenderer, YAMLRenderer
@@ -157,8 +157,8 @@ class LogOutView(APIView):
     return response
    
 #Subscription View
-@login_required
-@csrf_exempt
+# @login_required
+# @csrf_exempt
 
 
 @api_view(["POST"])
@@ -173,34 +173,26 @@ def submit_subscription(request):
     user = Pharmacy.objects.filter(id=payload['id']).first()
     if not user:
       raise AuthenticationFailed('User Account not found!')
+    # if not request.get('subscription_id',None):
+    #   return Response({'success':False,'subscription_id':'Is Requried'})
 
-    # email=request.data["email"]
-    # print(dir(request.user))
-    # ph1=Pharmacy.objects.get(email=email)
-    sub_type1=Subscription.objects.get(id=request.data["subscription_id"])
-    # sub1=Subscription()
-    # sub1.scrib_type=sub_type1
-    # sub1.start_date=request.data["start_date"]
-    # sub1.end_date=request.data["end_date"]
-    # sub1.price=request.data["price"]
-    # sub1.save()
-    #ph1.subscript=sub1
-    subscription = Subscription.create(
-            customer=request.user.stripe_customer_id,
-            items=[{"plan": sub_type1}],
-            trial_period_days=7,
-        )
-    sub_ph1=Subscription_Pharmacy()
-    sub_ph1.Pharmacy1=user
-    sub_ph1.Subscription1=sub_type1
-    sub_ph1.start_date=request.data["start_date"]
-    sub_ph1.end_date=request.data["end_date"]
-    sub_ph1.save()
-    return JsonResponse({"secuss":"the subscription done"})
+  
+    sub_type=Subscription.objects.filter(id=request.data["subscription_id"]).first()
+    if not sub_type:
+       return Response ({'success':False,'msg':'Subscription Type not Avabliable'})
+    payload = {
+        'pharmacy_id': user.id,
+        'subscription_id':sub_type.id,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=sub_type.duration),
+        'iat': datetime.datetime.utcnow()
+    }
+    token = jwt.encode(payload, 'secret', algorithm='HS256')
+    
+    end=datetime.datetime.utcnow()+datetime.timedelta(days=sub_type.duration) 
+    start =datetime.datetime.utcnow()
+    Subscription_Pharmacy.objects.create(pharmacy_id=user,subscription_id=sub_type,start_date=start,end_date=end)
+    return JsonResponse({"msg":"the subscription done",'subscriptionToken':token,'success':True})
     # return JsonResponse({"error":"the user is not authorized to do it"})    
-
-
-
 
 #Crud Opertaion For Medicine APIView
 class MedicineDetailes(APIView):
@@ -220,19 +212,24 @@ class MedicineDetailes(APIView):
       except jwt.ExpiredSignatureError:
         raise AuthenticationFailed('Authentication credentials were not provided.')
     
-      user = Pharmacy.objects.filter(id=payload['id']).first()
+      user = Pharmacy.objects.get(id=payload['id'])
       if not user:
         raise AuthenticationFailed('User Account not found!')
       if serializer.is_valid():
-         medicine=Medicine.objects.get(serial_number=request.data['serial_number'])
+         medicine=Medicine.objects.filter(serial_number=request.data['serial_number']).first()
          if not medicine:
             #return Response({'success':False,"msg":"Is Already Exit"},status=status.HTTP_400_BAD_REQUEST)
             medicine=serializer.save()
-          #pharmacy_medicine.object.create(pharmacy_id=user,medicine_id=medicine)    
+         exist= Pharmacy_medicine.objects.filter(pharmacy_id=user,medicine_id=medicine).first()
+         if exist:
+            return Response({'success':False,"msg":"Medicine Is Already Exist"},status=status.HTTP_400_BAD_REQUEST)
+         Pharmacy_medicine.objects.create(pharmacy_id=user,medicine_id=medicine)    
          return Response({"msg":"Medicine Succesfully Added",'Success':True},status=status.HTTP_201_CREATED)
       
       return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
+
+#Medicine Section
 #For Get&Put&Patch&Delete On object
 class MedicineInfo(APIView):
    def get(self,request,id):
@@ -280,9 +277,7 @@ class MedicineInfo(APIView):
       obj.delete()
       return Response({"msg":"deleted"},status=status.HTTP_204_NO_CONTENT)
    
-
-
-
+#Offers Section
 
 #Crud Opertions for for Offers
 class OffersDetailes(APIView):
@@ -299,7 +294,7 @@ class OffersDetailes(APIView):
          return Response(serializer.data,status=status.HTTP_201_CREATED)
       return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
    
-   #For Get&Put&Patch&Delete On object
+#For Get&Put&Patch&Delete On object
 class OfferInfo(APIView):
     def get(self,request,id):
         try:

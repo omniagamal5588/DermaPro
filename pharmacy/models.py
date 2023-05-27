@@ -44,20 +44,7 @@ class UserManager(BaseUserManager):
       user.is_admin = True
       user.save(using=self._db)
       return user
-
-#Offers Class
-class Offers(models.Model):
-   offer_name=models.CharField(max_length=255)
-   offer_image=models.ImageField(upload_to='img',null=False,verbose_name='Offer Image')
-   offer_description=models.TextField()
-   offer_previous_price=models.DecimalField(max_digits=6, decimal_places=2)
-   offer_new_price=models.DecimalField(max_digits=6,decimal_places=2)
-
-   def __str__(self):
-    return self.offer_name
-
-
-    
+      
 #  Custom User Model
 class Pharmacy(AbstractBaseUser):
   email = models.EmailField(
@@ -99,14 +86,14 @@ class Subscription(models.Model):
 
 
 class Subscription_Pharmacy(models.Model):
-    Pharmacy1=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True )
-    Subscription1=models.ForeignKey(Subscription,on_delete=models.SET_NULL,null=True )
+    pharmacy_id=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True )
+    subscription_id=models.ForeignKey(Subscription,on_delete=models.SET_NULL,null=True )
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True)  
 
 
 class Medicine(models.Model):
-  serial_number=models.CharField(max_length=255,unique=True )
+  serial_number=models.CharField(max_length=255 )
   medicine_image=models.ImageField(upload_to='img', null=False ,verbose_name='Medicine Image')
   medicine_name=models.CharField(max_length=255)
   medicine_description=models.TextField()
@@ -114,7 +101,11 @@ class Medicine(models.Model):
   pharmacy_id=models.CharField(Pharmacy,max_length=255,default=True)
   
 
+class Pharmacy_medicine(models.Model):
+  pharmacy_id=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True)
+  medicine_id=models.ForeignKey(Medicine,on_delete=models.SET_NULL,null=True)
 
+  
 
   def __str__(self):
     return self.medicine_name  
@@ -136,3 +127,19 @@ class Medicine(models.Model):
 
 
 
+#Offers Class
+class Offers(models.Model):
+   offer_name=models.CharField(max_length=255)
+   offer_image=models.ImageField(upload_to='img',null=False,verbose_name='Offer Image')
+   offer_description=models.TextField()
+   offer_previous_price=models.DecimalField(max_digits=6, decimal_places=2)
+   offer_new_price=models.DecimalField(max_digits=6,decimal_places=2)
+
+   def __str__(self):
+    return self.offer_name
+
+
+
+class Pharmacy_offers(models.Model):
+   pharmacy_id=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True )
+   offer_id=models.ForeignKey(Offers,on_delete=models.SET_NULL,null=True )
