@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from pharmacy.models import Pharmacy,Medicine,Offers
+from pharmacy.models import Pharmacy,Medicine,Offers,Pharmacy_medicine,Subscription
 # from . import utils
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -30,18 +30,16 @@ class PharmacyRegistrationSerializer(serializers.ModelSerializer):
   def create(self, validate_data):
     return Pharmacy.objects.create_user(**validate_data)
 
-
-
 #login pharmacy serializer
 class PharmacyLoginSeraializer(serializers.ModelSerializer):
   class Meta:
     model=Pharmacy
     fields=['email','password']
 
-class PharmacyProfileSerializer(serializers.ModelSerializer):
-  class Meta:
-    model = Pharmacy
-    fields = ['name','email', 'phone_number', 'location','description','pharmacy_image']
+# class PharmacyProfileSerializer(serializers.ModelSerializer):
+#   class Meta:
+#     model = Pharmacy
+#     fields = ['name','email', 'phone_number', 'location','description','pharmacy_image']
 
 
 #Pharmacy Profile
@@ -57,9 +55,6 @@ class ResetPasswordSerializerPharma(serializers.Serializer):
   class Meta:
     model = Pharmacy
     fields = ['email','old_password', 'new_password']
-        
-
-
 
 #MedicineSerializer
 class MedicineSerializer(serializers.ModelSerializer):
@@ -67,6 +62,13 @@ class MedicineSerializer(serializers.ModelSerializer):
     model=Medicine
     fields=['id','serial_number','medicine_image','medicine_name','medicine_description','medicine_price']
   
+#Phamacy_medicine
+class PharmacyMedicineSerializer(serializers.ModelSerializer):
+  medicine_id = MedicineSerializer()
+  pharmacy_id = PharmacyProfileSerializer()
+  class Meta:
+    model=Pharmacy_medicine
+    fields=['pharmacy_id','medicine_id','offer']
 
 #OffersSerializer
 class OfferSerializer(serializers.ModelSerializer):
@@ -82,3 +84,9 @@ class OfferSerializer(serializers.ModelSerializer):
       raise serializers.ValidationError("The two prices must be different")
     return data  
 
+#SubscriptionPlanSerializer
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+  class Meta:
+    model=Subscription
+    fields=['id','price','subscription_type','duration']
+ 
