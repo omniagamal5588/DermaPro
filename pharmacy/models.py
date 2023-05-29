@@ -79,8 +79,8 @@ class Pharmacy(AbstractBaseUser):
 class Subscription(models.Model):
     price=models.IntegerField(null=False)
     #user = models.ForeignKey(Pharmacy, on_delete=models.CASCADE)
-    subscription_type = models.CharField( max_length=255,null=True)
-    duration=models.IntegerField(default=0)
+    subscription_type = models.CharField( max_length=255,null=False)
+    duration=models.IntegerField(null=False)
     
    
 
@@ -104,11 +104,12 @@ class Medicine(models.Model):
 class Pharmacy_medicine(models.Model):
   pharmacy_id=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True)
   medicine_id=models.ForeignKey(Medicine,on_delete=models.SET_NULL,null=True)
+  offer = models.IntegerField(default=0)
 
   
 
-  def __str__(self):
-    return self.medicine_name  
+#   def __str__(self):
+#     return self.medicine_name  
   def has_perm(self, perm, obj=None):
       "Does the user have a specific permission?"
       # Simplest possible answer: Yes, always
@@ -125,8 +126,6 @@ class Pharmacy_medicine(models.Model):
       # Simplest possible answer: All admins are staff
       return self.is_admin
 
-
-
 #Offers Class
 class Offers(models.Model):
    offer_name=models.CharField(max_length=255)
@@ -138,8 +137,7 @@ class Offers(models.Model):
    def __str__(self):
     return self.offer_name
 
-
-
 class Pharmacy_offers(models.Model):
    pharmacy_id=models.ForeignKey(Pharmacy,on_delete=models.SET_NULL,null=True )
    offer_id=models.ForeignKey(Offers,on_delete=models.SET_NULL,null=True )
+ 
