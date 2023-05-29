@@ -20,6 +20,29 @@ def get_tokens_for_user(user):
       'access': str(refresh.access_token),
   }
 
+
+def isLogin(request):
+  token = request.META.get('HTTP_AUTHORIZATION')
+  if not token:
+    raise AuthenticationFailed('Authentication credentials were not provided.')
+  try:
+    payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+    
+  except jwt.ExpiredSignatureError:
+    raise AuthenticationFailed('Authentication credentials were not provided.')
+  
+  except jwt.exceptions.DecodeError:
+    raise AuthenticationFailed('Invalid token')
+  
+  user = User.objects.filter(id=payload['id']).first()
+  if not user:
+    raise AuthenticationFailed('User Account not found!')
+  
+  return user
+
+
+
+
 class UserRegistrationView(APIView):
   renderer_classes=[UserRenderer]
   def post(self, request, format=None):
@@ -75,19 +98,22 @@ class UserProfileView(APIView):
   renderer_classes = [UserRenderer]
   # permission_classes = [IsAuthenticated]
   def get(self, request, format=None):
-    token = request.COOKIES.get('jwt')
-    if not token:
-      raise AuthenticationFailed('Authentication credentials were not provided.')
-    try:
-      payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-    except jwt.ExpiredSignatureError:
-      raise AuthenticationFailed('Authentication credentials were not provided.')
-    
-    user = User.objects.filter(id=payload['id']).first()
-    if not user:
-      raise AuthenticationFailed('User Account not found!')
+    user=isLogin(request) 
     serializer = UserProfileSerializer(user)
-    return Response(serializer.data, status=status.HTTP_200_OK)         
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+  
+
+   
+  def put(self,request,format=None):
+    user=isLogin(request)
+    serializer= UserProfileSerializer(user,data=request.data)
+    if serializer.is_valid(raise_exception=True):
+        pharmacy = serializer.save()
+        return Response({'msg':'profile updated Successfully',"success":True}, status=status.HTTP_201_CREATED)
+    print(serializer.errors)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+   
       
 
 class RestPasswordView(APIView):
@@ -98,9 +124,6 @@ class RestPasswordView(APIView):
     if 'old_password' not in request.data and 'new_password' not in request.data:
       return Response({"errors": {"old_password": ["this field is required"], "new_password": ["this field is required"]}}, status=status.HTTP_400_BAD_REQUEST)
     
-    elif 'email' not in request.data:
-      return Response({"errors": {"email": ["this field is required"]}}, status=status.HTTP_400_BAD_REQUEST)
-    
     elif 'old_password' not in request.data:
       return Response({"errors": {"old_password": ["this field is required"]}}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -109,18 +132,7 @@ class RestPasswordView(APIView):
     
     old_password = request.data['old_password']
     new_password = request.data['new_password']
-    token = request.COOKIES.get('jwt')
-    if not token:
-      raise AuthenticationFailed('Authentication credentials were not provided.')
-    try:
-      payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-    except jwt.ExpiredSignatureError:
-      raise AuthenticationFailed('Authentication credentials were not provided.')
-    
-    user = User.objects.filter(id=payload['id']).first()
-    if not user:
-      raise AuthenticationFailed('User Account not found!')
-    
+    user=isLogin(request)
     flag = user.check_password(old_password)
 
     if not flag:
@@ -130,19 +142,30 @@ class RestPasswordView(APIView):
     user.save()
     return Response({"success":True, "message": "Password is Rest Successfully"}, status=status.HTTP_200_OK)
 
-
-
+#ForgetPassword For User
+class ForgetPasswordView(APIView):
+  renderer_classes=[UserRenderer]
+  def put(self,request,formt=None):
+       if 'email' not in request.data:
+        return Response({"errors": {"email": ["this field is required"]}}, status=status.HTTP_400_BAD_REQUEST)
+       
+       elif 'new_password' not in request.data:
+        return Response({"errors": {"new_password": ["this field is required"]}}, status=status.HTTP_400_BAD_REQUEST)
   
-class SendPasswordResetEmailView(APIView):
-  renderer_classes = [UserRenderer]
-  def post(self, request, format=None):
-    serializer = SendPasswordResetEmailSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    return Response({'msg':'Password Reset link send. Please check your Email'}, status=status.HTTP_200_OK)
+       email = request.data['email']
+       new_password = request.data['new_password']
+       user = User.objects.filter(email=email).first()
+       if not user:
+        raise AuthenticationFailed('User Account not found!')
+       user.set_password(new_password)
+       user.save()
+       return Response({"success":True, "message": "Password is changed Successfully"}, status=status.HTTP_200_OK)
 
-class UserPasswordResetView(APIView):
-  renderer_classes = [UserRenderer]
-  def post(self, request, uid, token, format=None):
-    serializer = UserPasswordResetSerializer(data=request.data, context={'uid':uid, 'token':token})
-    serializer.is_valid(raise_exception=True)
-    return Response({'msg':'Password Reset Successfully'}, status=status.HTTP_200_OK)    
+
+class LogOutView(APIView):
+   def post(self, request, format=None):
+    user = isLogin(request)
+    response_data = {"message": "LogOut Successfully !", "success":True}
+    response = Response(response_data)
+    response.delete_cookie('jwt')
+    return response
